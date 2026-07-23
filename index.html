@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadence — hear where the sentence breathes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow">speech&nbsp;→&nbsp;timed pauses</p>
+    <h1 class="hero-title">Hear where the sentence <em>breathes</em>.</h1>
+    <p class="hero-sub">Upload audio and get a timestamped entry for every comma and full stop — the words spoken in that stretch, and how long it lasted.</p>
+  </header>
+
+  <main>
+
+    <section id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Choose an audio file">
+      <input type="file" id="file-input" accept="audio/*" hidden />
+      <p class="dropzone-title">Drop an audio file here, or choose one</p>
+      <p class="dropzone-hint">MP3, WAV, M4A, FLAC, OGG — most audio formats work</p>
+    </section>
+
+    <div id="file-info" class="file-info" hidden>
+      <span id="file-name" class="file-name"></span>
+      <button id="change-file" class="link-button" type="button">choose a different file</button>
+    </div>
+
+    <audio id="audio-player" controls hidden></audio>
+
+    <div class="actions">
+      <button id="transcribe-btn" class="primary-button" type="button" disabled>Transcribe</button>
+      <button id="download-btn" class="ghost-button" type="button" hidden>Download JSON</button>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <p id="results-note" class="results-note" hidden>Each duration includes the pause that follows it, so clips placed back-to-back — for a voiceover, say — always add up to the exact audio length, with nothing left over.</p>
+
+    <div id="results" class="results"></div>
+
+  </main>
+
+  <footer class="footer">
+    <p>Transcription by <a href="https://www.assemblyai.com" target="_blank" rel="noopener">AssemblyAI</a>. Audio is sent to their API for processing and isn't stored by this app.</p>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
