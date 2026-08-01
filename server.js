@@ -12,7 +12,7 @@ const ASSEMBLYAI_BASE = 'https://api.assemblyai.com/v2';
 // AssemblyAI attaches punctuation directly to the word it follows (e.g. "morning,"),
 // so a segment ends the moment a word's text ends with one of these.
 // Add '!' or '?' here if you want those treated as pause boundaries too.
-const PAUSE_PUNCTUATION = [',', '.'];
+const PAUSE_PUNCTUATION = [',', '.', '?', '!'];
 
 const upload = multer({
   storage: multer.memoryStorage(),
