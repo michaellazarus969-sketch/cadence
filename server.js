@@ -1,4 +1,4 @@
-require('dotenv').config();
+  require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -11,8 +11,14 @@ const ASSEMBLYAI_BASE = 'https://api.assemblyai.com/v2';
 // Punctuation marks that count as a "real pause" boundary.
 // AssemblyAI attaches punctuation directly to the word it follows (e.g. "morning,"),
 // so a segment ends the moment a word's text ends with one of these.
-// Add '!' or '?' here if you want those treated as pause boundaries too.
-const PAUSE_PUNCTUATION = [',', '.', '?', '!', '—', ';'];
+const PAUSE_PUNCTUATION = [',', '.', '?', '!', '\u2014', ';'];
+
+// A segment also ends whenever there's real silence between two words — even with
+// no punctuation at all. AssemblyAI's own punctuation is a best guess and sometimes
+// misses a deliberate pause (common with TTS narration read from short script lines),
+// so this catches those directly from the actual word timings. Raise this if it's
+// splitting mid-sentence gaps that aren't real pauses; lower it if it's still missing some.
+const PAUSE_GAP_MS = 300;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -46,9 +52,15 @@ function buildSegments(words, audioDurationSeconds) {
   const rawSegments = [];
   let current = [];
 
-  for (const word of words) {
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
     current.push(word);
-    if (endsWithPausePunctuation(word.text)) {
+
+    const nextWord = words[i + 1];
+    const hasPunctuationPause = endsWithPausePunctuation(word.text);
+    const hasSilencePause = nextWord && (nextWord.start - word.end) >= PAUSE_GAP_MS;
+
+    if (hasPunctuationPause || hasSilencePause) {
       rawSegments.push(current);
       current = [];
     }
@@ -112,13 +124,20 @@ function finalizeSegments(rawSegments, audioDurationSeconds) {
       text: seg.map((w) => w.text).join(' '),
       startSeconds: startMs / 1000,
       endSeconds: endMs / 1000,
+      // Just the words themselves — how long they took to say. Segments in a row
+      // will NOT sum to the full audio length, since the pauses between them aren't
+      // counted here.
       speechSeconds: Math.round((endMs - startMs) / 1000),
+      // Use this one for editing: sums to the exact audio length across all segments.
       clipSeconds: clipSecondsRounded[i],
       pauseMark
     };
   });
 }
 
+// Step 1 (of 2): accept the upload, hand it to AssemblyAI, and start a transcription job.
+// Returns immediately with a jobId — the client polls /api/status/:jobId for the result,
+// rather than this request blocking until transcription finishes.
 app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   try {
     if (!ensureApiKey(res)) return;
@@ -159,6 +178,9 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   }
 });
 
+// Step 2 (of 2): the client calls this every couple of seconds with the jobId until it
+// gets back status "completed" (or "error"). AssemblyAI itself tracks job state, so this
+// route is just a thin, stateless pass-through — nothing to store on the server between polls.
 app.get('/api/status/:jobId', async (req, res) => {
   try {
     if (!ensureApiKey(res)) return;
@@ -182,7 +204,7 @@ app.get('/api/status/:jobId', async (req, res) => {
     if (data.status === 'error') {
       return res.json({ status: 'error', error: data.error });
     }
-    return res.json({ status: data.status });
+    return res.json({ status: data.status }); // 'queued' | 'processing'
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Unexpected server error.' });
